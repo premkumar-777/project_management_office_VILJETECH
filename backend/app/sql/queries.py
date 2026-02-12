@@ -322,3 +322,71 @@ INSERT_USER_ROLE = """
 INSERT INTO user_roles (user_id, role_id, assigned_by)
 VALUES (:user_id, :role_id, :assigned_by)
 """
+
+
+
+# _____________________________________________________
+
+# app/sql/queries.py
+
+# ------------------------------
+# User Queries
+# ------------------------------
+
+# Get user by email
+GET_USER_BY_EMAIL = """
+SELECT *
+FROM users
+WHERE email = :email
+"""
+
+# Get user by ID
+GET_USER_BY_ID = """
+SELECT *
+FROM users
+WHERE id = :user_id
+"""
+
+# Insert new user (pending by default, no password)
+INSERT_USER = """
+INSERT INTO users (name, email, location, status_id, created_by)
+VALUES (:name, :email, :location, :status_id, :created_by)
+"""
+
+# Update user password and enable MFA
+UPDATE_USER_PASSWORD_MFA = """
+UPDATE users
+SET password_hash = :password_hash,
+    mfa_secret = :mfa_secret,
+    mfa_enabled = :mfa_enabled,
+    status_id = 2  -- active after first login
+WHERE id = :user_id
+"""
+
+# ------------------------------
+# Role Queries
+# ------------------------------
+
+# Assign role to user
+INSERT_USER_ROLE = """
+INSERT INTO user_roles (user_id, role_id, assigned_by)
+VALUES (:user_id, :role_id, :assigned_by)
+"""
+
+# Get roles of a user
+GET_USER_ROLES = """
+SELECT r.role
+FROM roles r
+JOIN user_roles ur ON ur.role_id = r.id
+WHERE ur.user_id = :user_id
+"""
+
+# ------------------------------
+# Client Queries (optional)
+# ------------------------------
+
+GET_CLIENT_BY_EMAIL = """
+SELECT *
+FROM clients
+WHERE email = :email
+"""

@@ -1,164 +1,59 @@
-# # # from fastapi import APIRouter, Depends, HTTPException
-# # # from sqlalchemy.orm import Session
-# # # from app.database import SessionLocal
-# # # from app.schemas.auth_schema import LoginRequest, MFAVerifyRequest
-# # # from app.services.auth_service import authenticate, verify_mfa
 
-# # # router = APIRouter(prefix="/auth", tags=["Authentication"])
+# app/routes/auth.py
 
-# # # # ------------------------------
-# # # # DB dependency
-# # # # ------------------------------
-# # # def get_db():
-# # #     db = SessionLocal()
-# # #     try:
-# # #         yield db
-# # #     finally:
-# # #         db.close()
-
-# # # # ------------------------------
-# # # # Login endpoint
-# # # # ------------------------------
-# # # @router.post("/login")
-# # # def login(data: LoginRequest, db: Session = Depends(get_db)):
-# # #     result = authenticate(db, data.email, data.password)
-
-# # #     if not result:
-# # #         raise HTTPException(status_code=401, detail="Invalid credentials")
-
-# # #     return result
-
-# # # # ------------------------------
-# # # # Verify MFA endpoint
-# # # # ------------------------------
-# # # @router.post("/verify-mfa")
-# # # def verify_mfa_endpoint(data: MFAVerifyRequest, db: Session = Depends(get_db)):
-# # #     result = verify_mfa(db, data.temp_token, data.otp)
-# # #     if not result:
-# # #         raise HTTPException(status_code=401, detail="Invalid token or OTP")
-# # #     return result
-
-# # from fastapi import APIRouter, Depends, HTTPException
-# # from sqlalchemy.orm import Session
-# # from app.database import SessionLocal
-# # from app.schemas.auth_schema import LoginRequest, MFAVerifyRequest
-# # from app.services.auth_service import authenticate, verify_mfa
-
-# # router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-# # def get_db():
-# #     db = SessionLocal()
-# #     try:
-# #         yield db
-# #     finally:
-# #         db.close()
-
-# # # Login endpoint
-# # @router.post("/login")
-# # def login(data: LoginRequest, db: Session = Depends(get_db)):
-# #     result = authenticate(db, data.email, data.password)
-# #     if not result:
-# #         raise HTTPException(status_code=401, detail="Invalid credentials")
-# #     return result
-
-# # # Verify MFA endpoint
-# # # @router.post("/verify-mfa")
-# # # def verify_mfa_endpoint(data: MFAVerifyRequest, db: Session = Depends(get_db)):
-# # #     access_token, error = verify_mfa(db, data.temp_token, data.otp)
-# # #     if error:
-# # #         raise HTTPException(status_code=401, detail=error)
-# # #     return access_token
-
-# # @router.post("/verify-mfa")
-# # def verify_mfa_endpoint(data: MFAVerifyRequest, db: Session = Depends(get_db())):
-# #     access_data, error = verify_mfa(db, data.temp_token, data.otp)
-# #     if error:
-# #         raise HTTPException(status_code=401, detail=error)
-# #     return access_data
-
-# from fastapi import APIRouter, Depends, HTTPException
-# from sqlalchemy.orm import Session
-# from app.database import SessionLocal
-# from app.schemas.auth_schema import LoginRequest, MFAVerifyRequest
-# from app.services.auth_service import authenticate, verify_mfa
-
-# router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-# # ------------------------------
-# # DB dependency
-# # ------------------------------
-# def get_db():
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
-
-# # ------------------------------
-# # Login endpoint
-# # ------------------------------
-# @router.post("/login")
-# def login(data: LoginRequest, db: Session = Depends(get_db)):
-#     result = authenticate(db, data.email, data.password)
-#     if not result:
-#         raise HTTPException(status_code=401, detail="Invalid credentials")
-#     return result
-
-# # ------------------------------
-# # Verify MFA endpoint
-# # ------------------------------
-# @router.post("/verify-mfa")
-# def verify_mfa_endpoint(data: MFAVerifyRequest, db: Session = Depends(get_db)):
-#     access_data, error = verify_mfa(db, data.temp_token, data.otp)
-#     if error:
-#         raise HTTPException(status_code=401, detail=error)
-#     return access_data
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.services import auth_service
+from app.schemas.user_schema import SetPassword
+from app.schemas.auth_schema import LoginRequest, MFAVerifyRequest
+from app.services.auth_service import authenticate, verify_mfa, set_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-# -------------------------------
-# Login Route
-# -------------------------------
+# ------------------------------
+# Login Endpoint
+# ------------------------------
 @router.post("/login")
-def login(email: str, password: str, db: Session = Depends(get_db)):
+def login(request: LoginRequest, db: Session = Depends(get_db)):
     """
-    Login user or client.
-    If MFA is enabled, returns `mfa_required` and a temp_token.
-    Otherwise, returns final access token directly.
+    Login endpoint
+    Handles:
+      - Password check
+      - MFA check
+      - First-time MFA setup
     """
-    result = auth_service.authenticate(db, email, password)
-
+    result = authenticate(db, request.email, request.password)
     if not result:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    # Check if MFA is required
-    if result.get("mfa_required"):
-        return {
-            "mfa_required": True,
-            "temp_token": result["temp_token"]
-        }
-
-    # Normal login (MFA not enabled)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
     return result
 
 
-# -------------------------------
-# Verify MFA Route
-# -------------------------------
-@router.post("/verify-mfa")
-def verify_mfa(temp_token: str, otp: str, db: Session = Depends(get_db)):
+# ------------------------------
+# Set Password (first-time)
+# ------------------------------
+@router.post("/set-password")
+def set_user_password(request: SetPassword, db: Session = Depends(get_db)):
     """
-    Verify MFA OTP using temp_token.
-    Returns final access token if successful.
+    First-time password setup using temp_token
     """
-    access_data, error = auth_service.verify_mfa(db, temp_token, otp)
-
+    result, error = set_password(db, request.temp_token, request.password)
     if error:
-        raise HTTPException(status_code=401, detail=error)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+    return result
 
+
+# ------------------------------
+# MFA Verification
+# ------------------------------
+@router.post("/verify-mfa")
+def verify_mfa_endpoint(request: MFAVerifyRequest, db: Session = Depends(get_db)):
+    """
+    Verify OTP for MFA and return final access token
+    """
+    access_data, error = verify_mfa(db, request.temp_token, request.otp)
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return access_data
