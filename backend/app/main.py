@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Routes
 from app.routes.auth import router as auth_router
 from app.routes.user import router as user_router
+from app.routes import mfa
 
 app = FastAPI(
     title="PMO Platform API",
@@ -34,6 +35,7 @@ app.add_middleware(
 # ---------------------------
 app.include_router(auth_router)
 app.include_router(user_router)
+app.include_router(mfa.router)
 
 # ---------------------------
 # Root endpoint

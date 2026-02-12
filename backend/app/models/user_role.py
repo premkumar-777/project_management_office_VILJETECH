@@ -1,36 +1,55 @@
-# from sqlalchemy import Column, Integer, ForeignKey, TIMESTAMP
-# from app.database import Base
-# from sqlalchemy.sql import func
+# # from sqlalchemy import Column, Integer, ForeignKey, TIMESTAMP
+# # from app.database import Base
+# # from sqlalchemy.sql import func
 
+# # class UserRole(Base):
+# #     __tablename__ = "user_roles"
+
+# #     id = Column(Integer, primary_key=True)
+# #     user_id = Column(Integer, ForeignKey("users.id"))
+# #     role_id = Column(Integer, ForeignKey("roles.id"))
+# #     assigned_by = Column(Integer)
+# #     created_at = Column(TIMESTAMP, server_default=func.now())
+
+# # app/models/user_role.py
+
+# from datetime import datetime
+# from sqlalchemy import Column, Integer, ForeignKey, TIMESTAMP, DateTime
+# from sqlalchemy.sql import func
+# from sqlalchemy.orm import relationship
+# from app.database import Base
 # class UserRole(Base):
 #     __tablename__ = "user_roles"
 
 #     id = Column(Integer, primary_key=True)
+
 #     user_id = Column(Integer, ForeignKey("users.id"))
 #     role_id = Column(Integer, ForeignKey("roles.id"))
-#     assigned_by = Column(Integer)
-#     created_at = Column(TIMESTAMP, server_default=func.now())
+#     assigned_by = Column(Integer, ForeignKey("users.id"))
 
-# app/models/user_role.py
+#     created_at = Column(DateTime, default=datetime.utcnow)
 
-from sqlalchemy import Column, Integer, ForeignKey, TIMESTAMP
-from sqlalchemy.sql import func
+#     user = relationship("User", foreign_keys=[user_id], back_populates="roles")
+#     assigned_by_user = relationship("User", foreign_keys=[assigned_by])
+#     role = relationship("Role", back_populates="user_roles")
+
+
+
+from datetime import datetime
+from sqlalchemy import Column, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from app.database import Base
-
 
 class UserRole(Base):
     __tablename__ = "user_roles"
 
     id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    assigned_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
-    user_id = Column(Integer, ForeignKey("users.id"))
-    role_id = Column(Integer, ForeignKey("roles.id"))
-
-    assigned_by = Column(Integer)
-
-    created_at = Column(TIMESTAMP, server_default=func.now())
-
-    # 🔗 Relationships
-    user = relationship("User", back_populates="roles")
-    role = relationship("Role")
+    # Relationships
+    user = relationship("User", back_populates="roles", foreign_keys=[user_id])
+    assigned_by_user = relationship("User", back_populates="assigned_roles", foreign_keys=[assigned_by])
+    role = relationship("Role", back_populates="user_roles")

@@ -46,6 +46,15 @@ DB_PASSWORD = "Ponnadas#123"
 DB_HOST = "localhost"
 DB_NAME = "pmo_test_db"
 DB_PORT = "3306"
+# ------------------------------
+# DB dependency
+# ------------------------------
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # Encode password safely
 password = urllib.parse.quote_plus(DB_PASSWORD)
