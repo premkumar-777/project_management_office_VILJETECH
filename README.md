@@ -1,4 +1,4 @@
-PMO Platform Backend - README
+**PMO Platform **
 Overview
 
 This backend is built using FastAPI and SQLAlchemy for a Project Management Office (PMO) platform.
