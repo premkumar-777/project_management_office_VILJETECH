@@ -70,9 +70,9 @@
 # # )
 
 
-# # # Session and Base
-# # SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-# # Base = declarative_base()
+# # Session and Base
+# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Base = declarative_base()
 
 # import urllib.parse
 # from sqlalchemy import create_engine
@@ -110,6 +110,8 @@
 #         yield db
 #     finally:
 #         db.close()
+
+
 
 import os
 import urllib.parse
