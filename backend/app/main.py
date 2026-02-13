@@ -9,7 +9,9 @@ from app.routes.auth import router as auth_router
 # from app.routes.user import u
 from app.routes.user import router as user_router
 from app.routes import mfa
+from app.routes import auth
 
+app.include_router(auth.router)
 
 app = FastAPI(
     title="PMO Platform API",

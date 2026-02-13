@@ -103,12 +103,7 @@ def authenticate(db: Session, email: str, password: str):
         "qr_uri": qr_uri
     }
 def set_password(db: Session, temp_token: str, new_password: str):
-    """
-    Set password for first-time login users.
-    Decodes temp_token, generates MFA secret & enables MFA,
-    Returns a QR code URI for Google Authenticator.
-    """
-    # Decode JWT temp_token to get user_id
+
     try:
         payload = jwt.decode(temp_token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
@@ -117,16 +112,15 @@ def set_password(db: Session, temp_token: str, new_password: str):
     except JWTError:
         return None, "Invalid token"
 
-    # Hash the password
     password_hash = hash_password(new_password)
-    # Generate MFA secret
+
     mfa_secret = pyotp.random_base32()
-    # Generate QR URI
+
     qr_uri = pyotp.TOTP(mfa_secret).provisioning_uri(
-        name=f"user{user_id}@pmo.com", issuer_name="PMO-Platform"
+        name=f"user{user_id}@pmo.com",
+        issuer_name="PMO-Platform"
     )
 
-    # Update user in DB
     conn = db.connection()
     conn.execute(
         text("""
@@ -134,15 +128,24 @@ def set_password(db: Session, temp_token: str, new_password: str):
         SET password_hash = :password_hash,
             mfa_secret = :mfa_secret,
             mfa_enabled = 1,
+            first_login = 0,
             status_id = 2
         WHERE id = :user_id
         """),
-        {"password_hash": password_hash, "mfa_secret": mfa_secret, "user_id": user_id}
+        {
+            "password_hash": password_hash,
+            "mfa_secret": mfa_secret,
+            "user_id": user_id
+        }
     )
     db.commit()
 
-    return {"mfa_required": True, "qr_uri": qr_uri}, None
-
+    return {
+        "message": "Password set successfully",
+        "mfa_required": True,
+        "qr_uri": qr_uri,
+        "temp_token": temp_token   # return same temp token for OTP verification
+    }, None
 def verify_mfa(db: Session, temp_token: str, otp: str):
     """
     Verify OTP for MFA and return final access token.
