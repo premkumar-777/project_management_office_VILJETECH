@@ -36,13 +36,14 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 # ------------------------------
 @router.post("/set-password")
 def set_user_password(request: SetPassword, db: Session = Depends(get_db)):
-    """
-    First-time password setup using temp_token
-    """
-    result, error = set_password(db, request.temp_token, request.password)
-    if error:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+    result = set_password(db, request.temp_token, request.password)
+
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+
     return result
+
 
 
 # ------------------------------
@@ -53,7 +54,10 @@ def verify_mfa_endpoint(request: MFAVerifyRequest, db: Session = Depends(get_db)
     """
     Verify OTP for MFA and return final access token
     """
-    access_data, error = verify_mfa(db, request.temp_token, request.otp)
-    if error:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
-    return access_data
+
+    result = verify_mfa(db, request.temp_token, request.otp)
+
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+    return result

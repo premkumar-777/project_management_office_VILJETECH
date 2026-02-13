@@ -53,3 +53,4 @@ def verify_mfa(user_id: int, otp: str, db: Session = Depends(get_db)):
         return {"message": "MFA Enabled Successfully"}
     else:
         return {"error": "Invalid OTP"}
+

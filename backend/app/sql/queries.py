@@ -390,3 +390,4 @@ SELECT *
 FROM clients
 WHERE email = :email
 """
+

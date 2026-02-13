@@ -57,8 +57,13 @@ def add_user(
     invite_url = f"http://localhost:3000/set-password?token={temp_token}"
 
     return {
-        "message": "User created successfully",
+    "success": True,
+    "message": "User created successfully",
+    "data": {
         "user_id": new_user["id"],
+        "email": new_user["email"],
         "temp_token": temp_token,
         "invite_url": invite_url
     }
+}
+
