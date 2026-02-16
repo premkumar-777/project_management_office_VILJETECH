@@ -1,67 +1,73 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.schemas.project_schema import ProjectCreate, ProjectResponse, InviteEmployees
-from app.services.project_service import create_project, get_employees_only, invite_employees
 from app.database import get_db
+from app.schemas.project_schema import ProjectCreate, AssignMembersRequest
+from app.services.project_service import (
+    create_project,
+    get_all_projects,
+    get_my_projects,
+    assign_members,
+    get_project_members
+)
 from app.core.auth_dependency import get_current_user
-from app.models.user_role import UserRole
-from app.models.role import Role
+
+
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
-# ✅ Only Admin can create project
+# --------------------------------------------------
+# CREATE PROJECT (Admin)
+# --------------------------------------------------
 @router.post("/")
-def create_new_project(
-    project: ProjectCreate,
+def create_project_api(
+    data: ProjectCreate,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    user_roles = [ur.role.role.lower() for ur in current_user.roles]
-
-    if "admin" not in user_roles:
-        raise HTTPException(status_code=403, detail="Only admin can create projects")
+    return create_project(db, data, current_user)
 
 
-    new_project = create_project(db, project, current_user.id)
-
-    return {
-        "success": True,
-        "message": "Project created successfully",
-        "data": new_project
-    }
-
-
-
-# ✅ Get employees list (for invite dropdown)
-@router.get("/employees")
-def employees_list(db: Session = Depends(get_db)):
-    employees = get_employees_only(db)
-
-    return {
-        "success": True,
-        "message": "Employees fetched successfully",
-        "data": employees
-    }
+# --------------------------------------------------
+# GET ALL PROJECTS
+# --------------------------------------------------
+@router.get("/")
+def get_projects_api(
+    db: Session = Depends(get_db),
+):
+    return get_all_projects(db)
 
 
+# --------------------------------------------------
+# GET MY PROJECTS
+# --------------------------------------------------
+@router.get("/my")
+def get_my_projects_api(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    return get_my_projects(db, current_user.id)
 
-# ✅ Project manager invite employees
-@router.post("/{project_id}/invite")
-def invite_project_members(
+
+# --------------------------------------------------
+# ASSIGN MEMBERS
+# --------------------------------------------------
+@router.post("/{project_id}/assign")
+def assign_members_api(
     project_id: int,
-    data: InviteEmployees,
+    request: AssignMembersRequest,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    if current_user.role != "project_manager":
-        raise HTTPException(status_code=403, detail="Only project manager can invite")
+    return assign_members(db, project_id, request.members, current_user)
 
-    members = invite_employees(db, project_id, data.employee_ids)
 
-    return {
-        "success": True,
-        "message": "Employees invited successfully",
-        "data": members
-    }
-
+# --------------------------------------------------
+# GET PROJECT MEMBERS
+# --------------------------------------------------
+@router.get("/{project_id}/members")
+def get_project_members_api(
+    project_id: int,
+    db: Session = Depends(get_db),
+):
+    return get_project_members(db, project_id)

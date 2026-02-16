@@ -1,25 +1,28 @@
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, EmailStr
 from datetime import date
+from typing import List
 
+
+# -----------------------------
+# Create Project
+# -----------------------------
 class ProjectCreate(BaseModel):
     name: str
-    description: Optional[str] = None
-    client_email: str
-    location: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    description: str | None = None
+    client_email: EmailStr
+    location: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
     status_id: int
 
-class ProjectResponse(BaseModel):
-    id: int
-    name: str
-    description: Optional[str]
-    status_id: int
 
-    class Config:
-        from_attributes = True
+# -----------------------------
+# Assign Members
+# -----------------------------
+class MemberAssign(BaseModel):
+    user_id: int
+    role_id: int
 
 
-class InviteEmployees(BaseModel):
-    employee_ids: List[int]
+class AssignMembersRequest(BaseModel):
+    members: List[MemberAssign]
