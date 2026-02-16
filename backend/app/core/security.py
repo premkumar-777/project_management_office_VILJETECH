@@ -23,12 +23,26 @@ def create_access_token(data: dict):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def create_temp_token(user_id: int):
-    expire = datetime.utcnow() + timedelta(minutes=5)
+# def create_temp_token(user_id: int):
+#     expire = datetime.utcnow() + timedelta(minutes=5)
+
+#     payload = {
+#         "user_id": user_id,
+#         "mfa": True,
+#         "exp": expire
+#     }
+
+#     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+def create_temp_token(
+    user_id: int,
+    expires_minutes: int = 5,
+    token_type: str = "mfa"
+):
+    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
 
     payload = {
         "user_id": user_id,
-        "mfa": True,
+        "type": token_type,
         "exp": expire
     }
 

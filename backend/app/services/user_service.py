@@ -97,6 +97,7 @@
 #         "email": user.email,
 #         "temp_token": temp_token,
 #     }
+
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.user_role import UserRole
