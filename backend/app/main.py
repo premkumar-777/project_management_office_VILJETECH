@@ -9,6 +9,7 @@ from app.routes.auth import router as auth_router
 # from app.routes.user import u
 from app.routes.user import router as user_router
 from app.routes import mfa
+from app.routes.project_routes import router as project_router
 
 
 app = FastAPI(
@@ -38,6 +39,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(mfa.router)
+app.include_router(project_router)
 
 # ---------------------------
 # Root endpoint
