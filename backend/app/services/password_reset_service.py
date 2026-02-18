@@ -55,21 +55,31 @@ def send_forgot_password_otp(db: Session, email: str):
 
 
 # 📌 STEP 2 → VERIFY OTP
-def verify_otp(db: Session, email: str, otp: str):
 
-    record = db.query(PasswordReset).filter(
-        PasswordReset.email == email,
-        PasswordReset.otp == otp,
-        PasswordReset.verified == False
-    ).order_by(PasswordReset.created_at.desc()).first()
+def verify_otp(db: Session, email: str, otp: str):
+    record = (
+        db.query(PasswordReset)
+        .filter(PasswordReset.email == email)
+        .order_by(PasswordReset.created_at.desc())
+        .first()
+    )
 
     if not record:
-        raise HTTPException(status_code=400, detail="Invalid OTP")
+        raise HTTPException(status_code=404, detail="OTP not found")
 
+    # ⏱️ Check expiry
     if record.expires_at < datetime.utcnow():
+        # ❌ OTP expired → delete
+        db.delete(record)
+        db.commit()
         raise HTTPException(status_code=400, detail="OTP expired")
 
-    record.verified = True
+    # 🔐 Check OTP match
+    if record.otp != otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    # ✅ OTP valid → delete record
+    db.delete(record)
     db.commit()
 
     return {
@@ -99,3 +109,4 @@ def reset_password(db: Session, email: str, new_password: str):
         "success": True,
         "message": "Password updated successfully"
     }
+

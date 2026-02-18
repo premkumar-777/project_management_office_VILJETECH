@@ -23,19 +23,19 @@ def add_user(
     current_user=Depends(get_current_user)
 ):
     """
-    Super-admin or admin adds a new user (without password).
-    User will receive email/create-password flow separately.
+    Super-admin or admin adds a new user.
+    User will receive invitation email to set password.
     """
 
-    # 🔹 Permission check using role_names from auth_dependency
+    # 🔹 Permission check
     if "super admin" not in current_user.role_names and "admin" not in current_user.role_names:
         raise HTTPException(status_code=403, detail="You cannot add users")
 
     # 🔹 Admin restrictions
     if "admin" in current_user.role_names:
-        if 1 in data.roles:  # 1 = Super Admin
+        if 1 in data.roles:
             raise HTTPException(status_code=403, detail="Admin cannot create super-admin")
-        if 2 in data.roles:  # 2 = Admin
+        if 2 in data.roles:
             raise HTTPException(status_code=403, detail="Admin cannot create another admin")
 
     # 🔹 Create user
@@ -46,24 +46,27 @@ def add_user(
         email=data.email,
         roles=data.roles,
         location=data.location,
-        status_id=data.status_id  # default = 1 pending
+        status_id=data.status_id  # 1 = INVITED
     )
 
-    # 🔹 Generate temp token for first-time login
-    from app.core.security import create_temp_token
-    temp_token = create_temp_token(new_user["id"])
+    # 🔹 Generate invite token
+    from app.core.security import create_invite_token  # renamed function
+    invite_token = create_invite_token(new_user["id"])
 
-    # 🔹 Return invitation info (to send in email in future)
-    invite_url = f"http://localhost:3000/set-password?token={temp_token}"
+    invite_url = f"http://localhost:3000/set-password?token={invite_token}"
+
+    # 🔹 Role objects (frontend friendly)
+    roles_data = [{"id": r, "name": f"Role {r}"} for r in data.roles]
 
     return {
-    "success": True,
-    "message": "User created successfully",
-    "data": {
-        "user_id": new_user["id"],
-        "email": new_user["email"],
-        "temp_token": temp_token,
-        "invite_url": invite_url
+        "success": True,
+        "message": "User created successfully. Invitation ready.",
+        "data": {
+            "user_id": new_user["id"],
+            "email": new_user["email"],
+            "status": "INVITED",
+            "roles": roles_data,
+            "invite_url": invite_url,
+            "expires_in": 86400  # 24 hours
+        }
     }
-}
-

@@ -11,6 +11,8 @@ from app.routes.user import router as user_router
 from app.routes import mfa
 from app.routes.project_routes import router as project_router
 from app.routes import password_reset_routes
+# from app.routes.mfa_routes import router as mfa_router
+
 
 
 app = FastAPI(
@@ -42,7 +44,7 @@ app.include_router(user_router)
 app.include_router(mfa.router)
 app.include_router(project_router)
 app.include_router(password_reset_routes.router)
-
+# app.include_router(mfa_router)
 
 # ---------------------------
 # Root endpoint

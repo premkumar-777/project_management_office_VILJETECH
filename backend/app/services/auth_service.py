@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.core.security import verify_password, hash_password, create_access_token, create_temp_token
+from app.core.security import verify_password, hash_password, create_access_token, create_temp_token, create_refresh_token
 from app.sql import queries
 import pyotp
 from jose import jwt, JWTError
@@ -84,7 +84,6 @@ def authenticate(db: Session, email: str, password: str):
         "data": None
     }
 
-
 def set_password(db: Session, temp_token: str, new_password: str):
     try:
         payload = jwt.decode(temp_token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -94,14 +93,23 @@ def set_password(db: Session, temp_token: str, new_password: str):
     except JWTError:
         return {"success": False, "message": "Invalid token", "data": None}
 
+    conn = db.connection()
+    user = conn.execute(
+        text("SELECT * FROM users WHERE id = :user_id"),
+        {"user_id": user_id}
+    ).fetchone()
+
+    if not user:
+        return {"success": False, "message": "This email is not registered in our services", "data": None}
+    if user.status_id != 1:  # invited/pending
+        return {"success": False, "message": "User already registered or not allowed", "data": None}
+
     password_hash = hash_password(new_password)
     mfa_secret = pyotp.random_base32()
-
     qr_uri = pyotp.TOTP(mfa_secret).provisioning_uri(
         name=f"user{user_id}@pmo.com", issuer_name="PMO-Platform"
     )
 
-    conn = db.connection()
     conn.execute(
         text("""
         UPDATE users
@@ -117,8 +125,11 @@ def set_password(db: Session, temp_token: str, new_password: str):
 
     return {
         "success": True,
-        "message": "Password set successfully. Scan QR for MFA",
+        "message": "Registration completed. Scan QR for MFA",
         "data": {
+            "user_id": user.id,
+            "name": user.name,
+            "email": user.email,
             "mfa_required": True,
             "qr_uri": qr_uri
         }
@@ -161,21 +172,64 @@ def verify_mfa(db: Session, temp_token: str, otp: str):
             "data": None
         }
 
+    # ✅ roles
     roles = conn.execute(text(queries.GET_USER_ROLES), {"user_id": user.id}).fetchall()
     role_list = [r[0] for r in roles]
 
-    access_token = create_access_token({
+    # ✅ create tokens
+    token_payload = {
         "id": user.id,
         "type": "user",
         "roles": role_list
-    })
+    }
+
+    access_token = create_access_token(token_payload)
+    refresh_token = create_refresh_token(token_payload)
 
     return {
         "success": True,
         "message": "MFA verified successfully",
         "data": {
             "access_token": access_token,
+            "refresh_token": refresh_token,
             "token_type": "bearer",
+            "expires_in": 86400,   # 1 day in seconds
             "roles": role_list
+        }
+    }
+
+
+def refresh_access_token(refresh_token: str):
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        return {
+            "success": False,
+            "message": "Invalid refresh token",
+            "data": None
+        }
+
+    user_id = payload.get("id")
+    roles = payload.get("roles")
+
+    if not user_id:
+        return {
+            "success": False,
+            "message": "Invalid token payload",
+            "data": None
+        }
+
+    new_access_token = create_access_token({
+        "id": user_id,
+        "type": "user",
+        "roles": roles
+    })
+
+    return {
+        "success": True,
+        "message": "Access token refreshed",
+        "data": {
+            "access_token": new_access_token,
+            "token_type": "bearer"
         }
     }

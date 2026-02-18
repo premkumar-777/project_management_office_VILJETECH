@@ -2,7 +2,6 @@ from pydantic import BaseModel, EmailStr
 from datetime import date
 from typing import List
 
-
 # -----------------------------
 # Create Project
 # -----------------------------
@@ -14,7 +13,6 @@ class ProjectCreate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     status_id: int
-
 
 # -----------------------------
 # Assign Members
