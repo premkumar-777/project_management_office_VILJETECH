@@ -10,6 +10,7 @@ from app.models.project import Project
 from app.models.project_status import ProjectStatus
 from app.models.project_member import ProjectMember
 
+
 # Create all tables in selected DB
 Base.metadata.create_all(engine)
 
