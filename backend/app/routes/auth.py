@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.user_schema import SetPassword
 from app.schemas.auth_schema import LoginRequest, MFAVerifyRequest
-from app.services.auth_service import authenticate, verify_mfa, set_password
+from app.services.auth_service import authenticate, verify_mfa, set_password, refresh_access_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -34,7 +34,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 # ------------------------------
 # Set Password (first-time)
 # ------------------------------
-@router.post("/set-password")
+@router.post("/registration")
 def set_user_password(request: SetPassword, db: Session = Depends(get_db)):
 
     result = set_password(db, request.temp_token, request.password)
@@ -61,3 +61,7 @@ def verify_mfa_endpoint(request: MFAVerifyRequest, db: Session = Depends(get_db)
         raise HTTPException(status_code=400, detail=result["message"])
 
     return result
+
+@router.post("/refresh")
+def refresh_token(refresh_token: str):
+    return refresh_access_token(refresh_token)

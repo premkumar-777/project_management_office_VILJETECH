@@ -13,3 +13,8 @@ class VerifyOTPRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     email: EmailStr
     new_password: str
+
+class RegenerateMFARequest(BaseModel):
+    email: EmailStr
+    otp: str
+
