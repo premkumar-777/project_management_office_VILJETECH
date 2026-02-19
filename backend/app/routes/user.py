@@ -5,6 +5,10 @@ from app.database import SessionLocal
 from app.schemas.user_schema import UserCreateRequest
 from app.services.user_service import create_user
 from app.core.auth_dependency import get_current_user
+from app.templates.email_templates import get_invite_email
+from app.core.email import send_email
+from app.core.security import create_invite_token 
+
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -50,10 +54,29 @@ def add_user(
     )
 
     # 🔹 Generate invite token
-    from app.core.security import create_invite_token  # renamed function
+# 🔹 Generate invite token
     invite_token = create_invite_token(new_user["id"])
 
+    # 🔹 Build invite URL
     invite_url = f"http://localhost:3000/set-password?token={invite_token}"
+
+    # 🔹 Generate email HTML based on role
+    html_content = get_invite_email(
+        role_id=data.roles[0],  # first role
+        name=data.name,
+        invite_url=invite_url,
+        expiry_hours=24
+    )
+
+    # 🔹 Send email
+    send_email(
+        to_email=data.email,
+        subject="PMO Platform Invitation",
+        html_content=html_content
+    )
+
+    
+    # invite_url = f"http://localhost:3000/set-password?token={invite_token}"
 
     # 🔹 Role objects (frontend friendly)
     roles_data = [{"id": r, "name": f"Role {r}"} for r in data.roles]

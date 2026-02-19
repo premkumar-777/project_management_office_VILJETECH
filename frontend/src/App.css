@@ -1,9 +1,15 @@
+/* =========================
+   GLOBAL
+========================= */
 body {
   margin: 0;
   font-family: Arial, sans-serif;
   background: #f5f7fa;
 }
 
+/* =========================
+   AUTH PAGES
+========================= */
 .auth-container {
   display: flex;
   justify-content: center;
@@ -51,11 +57,115 @@ body {
   margin-bottom: 10px;
   text-align: center;
 }
-/* Dashboard */
-.dashboard-container {
-  padding: 40px;
+
+/* =========================
+   DASHBOARD LAYOUT
+========================= */
+.dashboard-layout {
+  display: flex;
 }
 
+.dashboard-content {
+  flex: 1;
+  padding: 30px;
+  background: #f4f6f9;
+  min-height: 100vh;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+.sidebar {
+  width: 220px;
+  height: 100vh;
+  background: #1f2937;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.sidebar h2 {
+  margin-bottom: 30px;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-link {
+  padding: 10px;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.sidebar-link:hover {
+  background: #374151;
+}
+
+.sidebar-link.active {
+  background: #2563eb;
+}
+
+.logout-btn {
+  padding: 8px 12px;
+  border: none;
+  background: #dc2626;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* =========================
+   CARDS (SUPER ADMIN USERS)
+========================= */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.card h3 {
+  margin-bottom: 10px;
+}
+
+.card p {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.card.clickable {
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.card.clickable:hover {
+  transform: translateY(-5px);
+  background: #e0f2fe;
+}
+
+.card.total-card {
+  background: #2563eb;
+  color: white;
+}
+
+/* =========================
+   BUTTONS
+========================= */
 .primary-btn {
   padding: 10px 20px;
   background: #2e7dff;
@@ -72,9 +182,12 @@ body {
 .success {
   margin-top: 15px;
   color: green;
+  font-weight: bold;
 }
 
-/* Modal */
+/* =========================
+   MODAL
+========================= */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -105,63 +218,17 @@ body {
   cursor: pointer;
 }
 
-.form-grid input,
-.form-grid select {
+.modal-content input {
   width: 100%;
   padding: 10px;
   margin-bottom: 15px;
   border: 1px solid #ddd;
   border-radius: 5px;
 }
-/* Layout */
-.layout {
-  display: flex;
-}
 
-.sidebar {
-  width: 220px;
-  height: 100vh;
-  background: #1f2937;
-  color: white;
-  padding: 20px;
-}
-
-.sidebar h2 {
-  margin-bottom: 20px;
-}
-
-.sidebar-user {
-  margin-bottom: 20px;
-}
-
-.logout-btn {
-  padding: 8px 12px;
-  border: none;
-  background: red;
-  color: white;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.main-content {
-  flex: 1;
-  padding: 40px;
-}
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  font-weight: bold;
-}
-
+/* =========================
+   TABLE (OPTIONAL FUTURE)
+========================= */
 .user-table {
   width: 100%;
   border-collapse: collapse;
@@ -177,57 +244,4 @@ body {
 
 .user-table th {
   background: #f1f1f1;
-}
-.sidebar nav {
-  margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-link {
-  padding: 10px;
-  color: white;
-  text-decoration: none;
-  border-radius: 5px;
-  margin-bottom: 5px;
-}
-
-.sidebar-link:hover {
-  background: #374151;
-}
-
-.sidebar-link.active {
-  background: #2563eb;
-}
-.tab-container {
-  margin-top: 20px;
-  display: flex;
-  gap: 10px;
-}
-
-.tab-container button {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  background: white;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-.tab-container button:hover {
-  background: #f1f1f1;
-}
-
-.tab-content {
-  margin-top: 20px;
-  padding: 15px;
-  background: #fafafa;
-  border-radius: 8px;
-}
-
-.detail-card {
-  background: white;
-  padding: 20px;
-  margin: 15px 0;
-  border-radius: 8px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
 }

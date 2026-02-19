@@ -1,70 +1,76 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { verifyMFA } from "../../networking/authApi";
-import { getDashboardRoute } from "../../utils/roleRedirect";
-import "../../App.css";
 
 const MFAOtp = () => {
-  const [otp, setOtp] = useState("");
-  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
+  const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
 
-    const tempToken = localStorage.getItem("temp_token");
+  const handleVerify = async (e) => {
+    e.preventDefault();
+
+    const tempToken = sessionStorage.getItem("temp_token");
 
     if (!tempToken) {
       setError("Session expired. Please login again.");
-      navigate("/login");
       return;
     }
 
     try {
-      const res = await verifyMFA({
+      const response = await verifyMFA({
         temp_token: tempToken,
-        otp: otp.trim(), // backend expects string
+        otp: otp,
       });
 
-      if (!res.success) {
-        setError(res.message || "Invalid OTP");
-        return;
+      // 🔥 Extract correct backend structure
+      const data = response.data;
+
+      if (response.success) {
+        // Store tokens
+        localStorage.setItem("access_token", data.access_token);
+        localStorage.setItem("refresh_token", data.refresh_token);
+        localStorage.setItem("role", data.roles[0]);
+
+        // Clear temp token
+        sessionStorage.removeItem("temp_token");
+
+        // Redirect based on role
+        if (data.roles[0] === "Super Admin") {
+          navigate("/super-admin/dashboard");
+        } else {
+          navigate("/");
+        }
       }
 
-      const data = res.data;
-
-      localStorage.setItem("access_token", data.access_token);
-
-      const normalizedRole = data.roles[0].toLowerCase();
-      localStorage.setItem("role", normalizedRole);
-
-      localStorage.removeItem("temp_token");
-
-      navigate(getDashboardRoute(normalizedRole));
-
     } catch (err) {
-      setError("Invalid OTP");
+      setError(
+        err.response?.data?.detail ||
+        "Invalid OTP or session expired"
+      );
     }
   };
 
   return (
     <div className="auth-container">
-      <form className="auth-card" onSubmit={handleSubmit}>
+      <div className="auth-card">
         <h2>MFA Verification</h2>
 
+        <form onSubmit={handleVerify}>
+          <input
+            type="text"
+            placeholder="Enter OTP"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+            required
+          />
+
+          <button type="submit">Verify</button>
+        </form>
+
         {error && <p className="error">{error}</p>}
-
-        <input
-          type="text"
-          placeholder="Enter OTP"
-          value={otp}
-          onChange={(e) => setOtp(e.target.value)}
-          required
-        />
-
-        <button type="submit">Verify</button>
-      </form>
+      </div>
     </div>
   );
 };

@@ -1,37 +1,40 @@
-import { NavLink, useNavigate } from "react-router-dom";
-import "../../App.css";
+import { useNavigate } from "react-router-dom";
+import "./Sidebar.css";
 
-const Sidebar = ({ menuItems = [] }) => {   // ✅ default empty array
+const Sidebar = ({ selectedMenu, setSelectedMenu }) => {
   const navigate = useNavigate();
-
-  const role = localStorage.getItem("role");
 
   const handleLogout = () => {
     localStorage.clear();
-    navigate("/login");
+    sessionStorage.clear();
+    navigate("/");
   };
 
   return (
     <div className="sidebar">
-      <h2>PMO Tool</h2>
-      <p className="sidebar-user">{role}</p>
+      <h2 className="sidebar-title">PMO Tool</h2>
 
-      <nav>
-        {menuItems.length > 0 &&
-          menuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-      </nav>
+      <div className="sidebar-menu">
+        <div
+          className={`menu-item ${
+            selectedMenu === "users" ? "active" : ""
+          }`}
+          onClick={() => setSelectedMenu("users")}
+        >
+          All Users
+        </div>
 
-      <button onClick={handleLogout} className="logout-btn">
+        <div
+          className={`menu-item ${
+            selectedMenu === "projects" ? "active" : ""
+          }`}
+          onClick={() => setSelectedMenu("projects")}
+        >
+          Projects
+        </div>
+      </div>
+
+      <button className="logout-btn" onClick={handleLogout}>
         Logout
       </button>
     </div>

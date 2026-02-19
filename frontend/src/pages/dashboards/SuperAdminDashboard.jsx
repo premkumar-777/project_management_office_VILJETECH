@@ -5,18 +5,26 @@ import { createUser, getUsers } from "../../networking/userApi";
 import "../../App.css";
 
 const SuperAdminDashboard = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [selectedMenu, setSelectedMenu] = useState("users");
   const [users, setUsers] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedRoleId, setSelectedRoleId] = useState(null);
   const [message, setMessage] = useState("");
 
   const [form, setForm] = useState({
     name: "",
     email: "",
     location: "",
-    role: "admin",
   });
 
-  // ✅ FIXED FUNCTION
+  // Role mapping
+  const roleConfig = [
+    { name: "Admin", id: 2 },
+    { name: "Project Manager", id: 3 },
+    { name: "Employee", id: 4 },
+    { name: "Client", id: 5 },
+  ];
+
   const fetchUsers = async () => {
     try {
       const data = await getUsers();
@@ -26,7 +34,6 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  // ✅ CALL ON LOAD
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -35,7 +42,11 @@ const SuperAdminDashboard = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // ✅ FIXED PAYLOAD (roles as array)
+  const handleCardClick = (roleId) => {
+    setSelectedRoleId(roleId);
+    setIsOpen(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -44,70 +55,80 @@ const SuperAdminDashboard = () => {
         name: form.name,
         email: form.email,
         location: form.location,
-        roles: [form.role],   // IMPORTANT
+        roles: [selectedRoleId],
+        status_id: 1,
       };
 
       const res = await createUser(payload);
+
       setMessage(res.message);
       setIsOpen(false);
-      fetchUsers();   // refresh list
+      setForm({ name: "", email: "", location: "" });
+      fetchUsers();
+
     } catch (err) {
-      console.error(err.response?.data);
-      alert("Failed to create user");
+      alert(JSON.stringify(err.response?.data));
     }
   };
 
-  const countByRole = (role) =>
-    users.filter((u) => u.roles?.[0] === role).length;
+  const countByRoleId = (roleId) => {
+    return users.filter((u) => u.roles?.[0] === roleId).length;
+  };
+
+  const totalUsers = users.length;
 
   return (
-    <div className="layout">
-      <Sidebar />
+    <div className="dashboard-layout">
+      <Sidebar
+        selectedMenu={selectedMenu}
+        setSelectedMenu={setSelectedMenu}
+      />
 
-      <div className="main-content">
+      <div className="dashboard-content">
         <h1>Super Admin Dashboard</h1>
 
-        <div className="card-grid">
-          <div className="card">Admins: {countByRole("admin")}</div>
-          <div className="card">PMs: {countByRole("project manager")}</div>
-          <div className="card">Employees: {countByRole("employee")}</div>
-          <div className="card">Clients: {countByRole("client")}</div>
-        </div>
+        {selectedMenu === "users" && (
+          <>
+            <div className="card-grid">
 
-        <button className="primary-btn" onClick={() => setIsOpen(true)}>
-          + Add Resource
-        </button>
+              {/* Total Users */}
+              <div className="card total-card">
+                <h3>Total Users</h3>
+                <p>{totalUsers}</p>
+              </div>
 
-        {message && <p className="success">{message}</p>}
+              {/* Role Cards */}
+              {roleConfig.map((role) => (
+                <div
+                  key={role.id}
+                  className="card clickable"
+                  onClick={() => handleCardClick(role.id)}
+                >
+                  <h3>{role.name}</h3>
+                  <p>{countByRoleId(role.id)}</p>
+                </div>
+              ))}
+            </div>
 
-        <table className="user-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Location</th>
-              <th>Role</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td>{u.name}</td>
-                <td>{u.email}</td>
-                <td>{u.location}</td>
-                <td>{u.roles?.[0]}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            {message && <p className="success">{message}</p>}
+          </>
+        )}
 
+        {selectedMenu === "projects" && (
+          <div>
+            <h2>Projects Section (Coming Soon)</h2>
+          </div>
+        )}
+
+        {/* Add User Modal */}
         <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
-          <h2>Add Resource</h2>
+          <h2>Add User</h2>
 
           <form onSubmit={handleSubmit}>
             <input
               name="name"
               placeholder="Name"
+              value={form.name}
               onChange={handleChange}
               required
             />
@@ -115,6 +136,7 @@ const SuperAdminDashboard = () => {
             <input
               name="email"
               placeholder="Email"
+              value={form.email}
               onChange={handleChange}
               required
             />
@@ -122,16 +144,10 @@ const SuperAdminDashboard = () => {
             <input
               name="location"
               placeholder="Location"
+              value={form.location}
               onChange={handleChange}
               required
             />
-
-            <select name="role" onChange={handleChange}>
-              <option value="admin">Admin</option>
-              <option value="project manager">Project Manager</option>
-              <option value="employee">Employee</option>
-              <option value="client">Client</option>
-            </select>
 
             <button className="primary-btn">Invite</button>
           </form>
