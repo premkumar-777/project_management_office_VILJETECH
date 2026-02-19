@@ -58,7 +58,9 @@ def add_user(
     invite_token = create_invite_token(new_user["id"])
 
     # 🔹 Build invite URL
-    invite_url = f"http://localhost:3000/set-password?token={invite_token}"
+    # invite_url = f"http://localhost:3000/set-password?token={invite_token}"
+    invite_url = f"http://localhost:5173/registration?token={invite_token}"
+
 
     # 🔹 Generate email HTML based on role
     html_content = get_invite_email(

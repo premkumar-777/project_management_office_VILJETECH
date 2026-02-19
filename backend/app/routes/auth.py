@@ -37,12 +37,20 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/registration")
 def set_user_password(request: SetPassword, db: Session = Depends(get_db)):
 
-    result = set_password(db, request.temp_token, request.password)
+    # Pass all required arguments
+    result = set_password(
+        db,
+        request.temp_token,
+        request.email,
+        request.name,
+        request.password  # This is new_password
+    )
 
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
 
     return result
+
 
 
 

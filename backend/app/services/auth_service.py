@@ -84,7 +84,59 @@ def authenticate(db: Session, email: str, password: str):
         "data": None
     }
 
-def set_password(db: Session, temp_token: str, new_password: str):
+# def set_password(db: Session, temp_token: str, new_password: str):
+#     try:
+#         payload = jwt.decode(temp_token, SECRET_KEY, algorithms=[ALGORITHM])
+#         user_id = payload.get("user_id")
+#         if user_id is None:
+#             return {"success": False, "message": "Invalid token", "data": None}
+#     except JWTError:
+#         return {"success": False, "message": "Invalid token", "data": None}
+
+#     conn = db.connection()
+#     user = conn.execute(
+#         text("SELECT * FROM users WHERE id = :user_id"),
+#         {"user_id": user_id}
+#     ).fetchone()
+
+#     if not user:
+#         return {"success": False, "message": "This email is not registered in our services", "data": None}
+#     if user.status_id != 1:  # invited/pending
+#         return {"success": False, "message": "User already registered or not allowed", "data": None}
+
+#     password_hash = hash_password(new_password)
+#     mfa_secret = pyotp.random_base32()
+#     qr_uri = pyotp.TOTP(mfa_secret).provisioning_uri(
+#         name=f"user{user_id}@pmo.com", issuer_name="PMO-Platform"
+#     )
+
+#     conn.execute(
+#         text("""
+#         UPDATE users
+#         SET password_hash = :password_hash,
+#             mfa_secret = :mfa_secret,
+#             mfa_enabled = 1,
+#             status_id = 2
+#         WHERE id = :user_id
+#         """),
+#         {"password_hash": password_hash, "mfa_secret": mfa_secret, "user_id": user_id}
+#     )
+#     db.commit()
+
+#     return {
+#         "success": True,
+#         "message": "Registration completed. Scan QR for MFA",
+#         "data": {
+#             "user_id": user.id,
+#             "name": user.name,
+#             "email": user.email,
+#             "mfa_required": True,
+#             "qr_uri": qr_uri
+#         }
+#     }
+
+def set_password(db: Session, temp_token: str, email: str, name: str, new_password: str):
+    # Verify temp_token
     try:
         payload = jwt.decode(temp_token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
@@ -94,32 +146,37 @@ def set_password(db: Session, temp_token: str, new_password: str):
         return {"success": False, "message": "Invalid token", "data": None}
 
     conn = db.connection()
+
+    # Fetch user by ID and email to ensure token matches correct user
     user = conn.execute(
-        text("SELECT * FROM users WHERE id = :user_id"),
-        {"user_id": user_id}
+        text("SELECT * FROM users WHERE id = :user_id AND email = :email"),
+        {"user_id": user_id, "email": email}
     ).fetchone()
 
     if not user:
-        return {"success": False, "message": "This email is not registered in our services", "data": None}
+        return {"success": False, "message": "This email is not registered or token mismatch", "data": None}
+    
     if user.status_id != 1:  # invited/pending
         return {"success": False, "message": "User already registered or not allowed", "data": None}
 
+    # Update name and password
     password_hash = hash_password(new_password)
     mfa_secret = pyotp.random_base32()
     qr_uri = pyotp.TOTP(mfa_secret).provisioning_uri(
-        name=f"user{user_id}@pmo.com", issuer_name="PMO-Platform"
+        name=email, issuer_name="PMO-Platform"
     )
 
     conn.execute(
         text("""
-        UPDATE users
-        SET password_hash = :password_hash,
-            mfa_secret = :mfa_secret,
-            mfa_enabled = 1,
-            status_id = 2
-        WHERE id = :user_id
+            UPDATE users
+            SET name = :name,
+                password_hash = :password_hash,
+                mfa_secret = :mfa_secret,
+                mfa_enabled = 1,
+                status_id = 2
+            WHERE id = :user_id
         """),
-        {"password_hash": password_hash, "mfa_secret": mfa_secret, "user_id": user_id}
+        {"name": name, "password_hash": password_hash, "mfa_secret": mfa_secret, "user_id": user_id}
     )
     db.commit()
 
@@ -128,27 +185,31 @@ def set_password(db: Session, temp_token: str, new_password: str):
         "message": "Registration completed. Scan QR for MFA",
         "data": {
             "user_id": user.id,
-            "name": user.name,
-            "email": user.email,
+            "name": name,
+            "email": email,
             "mfa_required": True,
             "qr_uri": qr_uri
         }
     }
+
 def verify_mfa(db: Session, temp_token: str, otp: str):
     try:
         payload = jwt.decode(temp_token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         return {
             "success": False,
-            "message": "Invalid token",
+            "message": "Invalid or expired token",
             "data": None
         }
 
     user_id = payload.get("user_id")
-    if not user_id:
+    token_type = payload.get("type")
+
+    # ✅ ensure correct token usage
+    if not user_id or token_type != "mfa":
         return {
             "success": False,
-            "message": "Invalid token payload",
+            "message": "Invalid token",
             "data": None
         }
 
@@ -174,7 +235,6 @@ def verify_mfa(db: Session, temp_token: str, otp: str):
             "data": None
         }
 
-    # ✅ roles
     roles = conn.execute(
         text(queries.GET_USER_ROLES),
         {"user_id": user.id}
@@ -182,7 +242,6 @@ def verify_mfa(db: Session, temp_token: str, otp: str):
 
     role_list = [r[0] for r in roles]
 
-    # ✅ tokens
     token_payload = {
         "id": user.id,
         "type": "user",
@@ -208,6 +267,7 @@ def verify_mfa(db: Session, temp_token: str, otp: str):
             "roles": role_list
         }
     }
+
 
 def refresh_access_token(db: Session, refresh_token: str):
     try:

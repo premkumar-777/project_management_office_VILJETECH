@@ -10,8 +10,10 @@ class UserCreateRequest(BaseModel):
     status_id: Optional[int] = 1  # pending by default
 
 class SetPassword(BaseModel):
-    password: str
     temp_token: str
+    email: str
+    name: str
+    password: str  # This is the "new_password"
 
 class MFARequest(BaseModel):
     temp_token: str

@@ -10,7 +10,6 @@ TEMP_TOKEN_EXPIRE_MINUTES = 5
 INVITE_TOKEN_EXPIRE_HOURS = 24
 RESET_TOKEN_EXPIRE_MINUTES = 10
 
-
 # 🔐 Password helpers
 def hash_password(password: str):
     return pwd_context.hash(password)
