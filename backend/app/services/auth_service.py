@@ -134,7 +134,6 @@ def set_password(db: Session, temp_token: str, new_password: str):
             "qr_uri": qr_uri
         }
     }
-
 def verify_mfa(db: Session, temp_token: str, otp: str):
     try:
         payload = jwt.decode(temp_token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -154,7 +153,10 @@ def verify_mfa(db: Session, temp_token: str, otp: str):
         }
 
     conn = db.connection()
-    user = conn.execute(text(queries.GET_USER_BY_ID), {"user_id": user_id}).fetchone()
+    user = conn.execute(
+        text(queries.GET_USER_BY_ID),
+        {"user_id": user_id}
+    ).fetchone()
 
     if not user or not user.mfa_enabled:
         return {
@@ -173,10 +175,14 @@ def verify_mfa(db: Session, temp_token: str, otp: str):
         }
 
     # ✅ roles
-    roles = conn.execute(text(queries.GET_USER_ROLES), {"user_id": user.id}).fetchall()
+    roles = conn.execute(
+        text(queries.GET_USER_ROLES),
+        {"user_id": user.id}
+    ).fetchall()
+
     role_list = [r[0] for r in roles]
 
-    # ✅ create tokens
+    # ✅ tokens
     token_payload = {
         "id": user.id,
         "type": "user",
@@ -193,13 +199,17 @@ def verify_mfa(db: Session, temp_token: str, otp: str):
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "bearer",
-            "expires_in": 86400,   # 1 day in seconds
+            "expires_in": 86400,
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email
+            },
             "roles": role_list
         }
     }
 
-
-def refresh_access_token(refresh_token: str):
+def refresh_access_token(db: Session, refresh_token: str):
     try:
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
@@ -209,13 +219,26 @@ def refresh_access_token(refresh_token: str):
             "data": None
         }
 
-    user_id = payload.get("id")
-    roles = payload.get("roles")
-
-    if not user_id:
+    if payload.get("token_type") != "refresh":
         return {
             "success": False,
-            "message": "Invalid token payload",
+            "message": "Invalid token type",
+            "data": None
+        }
+
+    user_id = payload.get("id")
+    roles = payload.get("roles", [])
+
+    conn = db.connection()
+    user = conn.execute(
+        text(queries.GET_USER_BY_ID),
+        {"user_id": user_id}
+    ).fetchone()
+
+    if not user:
+        return {
+            "success": False,
+            "message": "User not found",
             "data": None
         }
 
@@ -225,11 +248,25 @@ def refresh_access_token(refresh_token: str):
         "roles": roles
     })
 
+    new_refresh_token = create_refresh_token({
+        "id": user_id,
+        "type": "user",
+        "roles": roles
+    })
+
     return {
         "success": True,
-        "message": "Access token refreshed",
+        "message": "Token refreshed successfully",
         "data": {
             "access_token": new_access_token,
-            "token_type": "bearer"
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer",
+            "expires_in": 86400,
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email
+            },
+            "roles": roles
         }
     }

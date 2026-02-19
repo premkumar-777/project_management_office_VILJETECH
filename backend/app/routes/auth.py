@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.user_schema import SetPassword
-from app.schemas.auth_schema import LoginRequest, MFAVerifyRequest
+from app.schemas.auth_schema import LoginRequest, MFAVerifyRequest,RefreshTokenRequest
 from app.services.auth_service import authenticate, verify_mfa, set_password, refresh_access_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -62,6 +62,10 @@ def verify_mfa_endpoint(request: MFAVerifyRequest, db: Session = Depends(get_db)
 
     return result
 
+# @router.post("/refresh")
+# def refresh_token(refresh_token: str):
+#     return refresh_access_token(refresh_token)
+
 @router.post("/refresh")
-def refresh_token(refresh_token: str):
-    return refresh_access_token(refresh_token)
+def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
+    return refresh_access_token(db, request.refresh_token)

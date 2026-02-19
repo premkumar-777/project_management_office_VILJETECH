@@ -9,14 +9,16 @@ from app.core.security import hash_password
 
 
 OTP_EXPIRY_MINUTES = 5
-ACTIVE_STATUS_ID = 2  # ✅ your rule
+ACTIVE_STATUS_ID = 2
 
 
 def generate_otp():
     return str(random.randint(100000, 999999))
 
 
-# 📌 STEP 1 → SEND OTP
+# ================================
+# 📌 STEP 1 — SEND OTP
+# ================================
 def send_forgot_password_otp(db: Session, email: str):
 
     user = db.query(User).filter(User.email == email).first()
@@ -27,6 +29,10 @@ def send_forgot_password_otp(db: Session, email: str):
     if user.status_id != ACTIVE_STATUS_ID:
         raise HTTPException(status_code=403, detail="Your account is not active")
 
+    # 🧹 delete old OTPs
+    db.query(PasswordReset).filter(PasswordReset.email == email).delete()
+    db.commit()
+
     otp = generate_otp()
     expiry = datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES)
 
@@ -34,29 +40,31 @@ def send_forgot_password_otp(db: Session, email: str):
         user_id=user.id,
         email=email,
         otp=otp,
-        expires_at=expiry
+        expires_at=expiry,
+        verified=False
     )
 
     db.add(reset_entry)
     db.commit()
 
-    # 👉 integrate email sending here later
+    # 👉 integrate email service here
     print("OTP:", otp)
 
     return {
         "success": True,
-        "message": "OTP sent to your email",
+        "message": "OTP sent successfully",
         "data": {
             "email": email,
-            "otp": otp,  # remove in production
             "expires_in": OTP_EXPIRY_MINUTES * 60
         }
     }
 
 
-# 📌 STEP 2 → VERIFY OTP
-
+# ================================
+# 📌 STEP 2 — VERIFY OTP
+# ================================
 def verify_otp(db: Session, email: str, otp: str):
+
     record = (
         db.query(PasswordReset)
         .filter(PasswordReset.email == email)
@@ -67,19 +75,18 @@ def verify_otp(db: Session, email: str, otp: str):
     if not record:
         raise HTTPException(status_code=404, detail="OTP not found")
 
-    # ⏱️ Check expiry
+    # ⏱️ expired
     if record.expires_at < datetime.utcnow():
-        # ❌ OTP expired → delete
         db.delete(record)
         db.commit()
         raise HTTPException(status_code=400, detail="OTP expired")
 
-    # 🔐 Check OTP match
+    # ❌ invalid
     if record.otp != otp:
         raise HTTPException(status_code=400, detail="Invalid OTP")
 
-    # ✅ OTP valid → delete record
-    db.delete(record)
+    # ✅ mark verified
+    record.verified = True
     db.commit()
 
     return {
@@ -88,25 +95,42 @@ def verify_otp(db: Session, email: str, otp: str):
     }
 
 
-# 📌 STEP 3 → RESET PASSWORD
+# ================================
+# 📌 STEP 3 — RESET PASSWORD
+# ================================
 def reset_password(db: Session, email: str, new_password: str):
 
-    record = db.query(PasswordReset).filter(
-        PasswordReset.email == email,
-        PasswordReset.verified == True
-    ).order_by(PasswordReset.created_at.desc()).first()
+    record = (
+        db.query(PasswordReset)
+        .filter(
+            PasswordReset.email == email,
+            PasswordReset.verified == True
+        )
+        .order_by(PasswordReset.created_at.desc())
+        .first()
+    )
 
     if not record:
         raise HTTPException(status_code=400, detail="OTP not verified")
 
+    # extra safety → check expiry again
+    if record.expires_at < datetime.utcnow():
+        db.delete(record)
+        db.commit()
+        raise HTTPException(status_code=400, detail="OTP expired")
+
     user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     user.password_hash = hash_password(new_password)
 
+    # 🧹 delete OTP record after success
+    db.delete(record)
     db.commit()
 
     return {
         "success": True,
         "message": "Password updated successfully"
     }
-
